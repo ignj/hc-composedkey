@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 
 namespace hotchocolate_playground
 {
@@ -11,7 +12,7 @@ namespace hotchocolate_playground
 
         public int TypeId { get; set; }
 
-        public CompositeKey ComposedKey { get => new CompositeKey(Id, TypeId); }
+        public string ComposedKey { get => JsonSerializer.Serialize(new CompositeKey(Id, TypeId)); }
 
     }
 
