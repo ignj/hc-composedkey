@@ -26,6 +26,8 @@ namespace hotchocolate_playground
                 .AddQueryType(d => d.Name("Query"))
                 .AddTypeExtension<ExampleQueries>()
                 .AddType<ExampleType>()
+                .AddType<WrapperType>()
+                .AddProjections()
                 .EnableRelaySupport()
                 .AddDataLoader<ExampleByIdDataLoader>();
         }

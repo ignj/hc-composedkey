@@ -45,9 +45,52 @@ namespace hotchocolate_playground.Migrations
                         },
                         new
                         {
-                            Id = 1,
+                            Id = 2,
                             TypeId = 4
                         });
+                });
+
+            modelBuilder.Entity("hotchocolate_playground.WrapperClass", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ExampleId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TypeId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExampleId", "TypeId");
+
+                    b.ToTable("WrapperClasses");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 5,
+                            ExampleId = 2,
+                            TypeId = 4
+                        });
+                });
+
+            modelBuilder.Entity("hotchocolate_playground.WrapperClass", b =>
+                {
+                    b.HasOne("hotchocolate_playground.Example", "Example")
+                        .WithMany("WraperClasses")
+                        .HasForeignKey("ExampleId", "TypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Example");
+                });
+
+            modelBuilder.Entity("hotchocolate_playground.Example", b =>
+                {
+                    b.Navigation("WraperClasses");
                 });
 #pragma warning restore 612, 618
         }

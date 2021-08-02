@@ -1,5 +1,6 @@
 using GreenDonut;
 using HotChocolate;
+using HotChocolate.Data;
 using HotChocolate.DataLoader;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
@@ -23,16 +24,23 @@ namespace hotchocolate_playground
     {
         [UseApplicationDbContext]
         public IQueryable<Example> GetExamples([ScopedService] ApplicationDbContext context) => context.Examples;
+
+        [UseApplicationDbContext]
+        [UseProjection]
+        public IQueryable<WrapperClass> GetWrappers([ScopedService] ApplicationDbContext context) => context.WrapperClasses;
     }
 
+    // EXAMPLE CLASS CONFIG
     public class ExampleType : ObjectType<Example>
     {
         protected override void Configure(IObjectTypeDescriptor<Example> descriptor)
         {
             descriptor
                 .ImplementsNode()
-                .IdField(t => t.ComposedKey)
+                .IdField(t => t.Id_TypeId)
                 .ResolveNode((ctx, id) => ctx.DataLoader<ExampleByIdDataLoader>().LoadAsync(id, ctx.RequestAborted));
+
+            descriptor.BindFieldsImplicitly();
         }
     }
 
@@ -56,8 +64,8 @@ namespace hotchocolate_playground
             await using ApplicationDbContext dbContext =
                 _dbContextFactory.CreateDbContext();
 
-            List<CompositeKey> keys = new List<CompositeKey>();
-            foreach (var key in keysString) keys.Add(JsonSerializer.Deserialize<CompositeKey>(key));
+            List<Id_TypeId> keys = new List<Id_TypeId>();
+            foreach (var key in keysString) keys.Add(JsonSerializer.Deserialize<Id_TypeId>(key));
 
             IQueryable<Example> query = null;
             foreach (var ck in keys)
@@ -65,7 +73,7 @@ namespace hotchocolate_playground
                 var temp = dbContext.Examples.Where(x => x.Id == ck.Id && x.TypeId == ck.TypeId);
                 query = query == null ? temp : query.Union(temp);
             }
-            return await query.ToDictionaryAsync(t => t.ComposedKey, cancellationToken);
+            return await query.ToDictionaryAsync(t => t.Id_TypeId, cancellationToken);
         }
     }
 
@@ -75,5 +83,45 @@ namespace hotchocolate_playground
             IDescriptorContext context,
             IObjectFieldDescriptor descriptor,
             MemberInfo member) => descriptor.UseDbContext<ApplicationDbContext>();
+    }
+
+    //WRAPPER CLASS CONFIG
+    public class WrapperType : ObjectType<WrapperClass>
+    {
+        protected override void Configure(IObjectTypeDescriptor<WrapperClass> descriptor)
+        {
+            descriptor
+                .ImplementsNode()
+                .IdField(t => t.Id)
+                .ResolveNode((ctx, id) => ctx.DataLoader<WrapperClassByIdDataLoader>().LoadAsync(id, ctx.RequestAborted));
+
+            descriptor.BindFieldsImplicitly();
+        }
+    }
+
+    public class WrapperClassByIdDataLoader : BatchDataLoader<int, WrapperClass>
+    {
+        private readonly IDbContextFactory<ApplicationDbContext> _dbContextFactory;
+
+        public WrapperClassByIdDataLoader(
+            IBatchScheduler batchScheduler,
+            IDbContextFactory<ApplicationDbContext> dbContextFactory)
+            : base(batchScheduler)
+        {
+            _dbContextFactory = dbContextFactory ??
+                throw new ArgumentNullException(nameof(dbContextFactory));
+        }
+
+        protected override async Task<IReadOnlyDictionary<int, WrapperClass>> LoadBatchAsync(
+            IReadOnlyList<int> keys,
+            CancellationToken cancellationToken)
+        {
+            await using ApplicationDbContext dbContext =
+                _dbContextFactory.CreateDbContext();
+
+            return await dbContext.WrapperClasses
+                .Where(wc => keys.Contains(wc.Id))
+                .ToDictionaryAsync(t => t.Id, cancellationToken);
+        }
     }
 }
